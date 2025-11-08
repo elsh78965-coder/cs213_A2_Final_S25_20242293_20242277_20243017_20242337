@@ -3,7 +3,6 @@
 PlayerAudio::PlayerAudio()
 {
     formatManager.registerBasicFormats();
-
     resampler.reset(new juce::ResamplingAudioSource(&transportSource, false, 2));
 }
 
@@ -30,7 +29,7 @@ void PlayerAudio::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferTo
     if (length > 0.0)
     {
         const double pos = transportSource.getCurrentPosition();
-        const double epsilon = 0.02; 
+        const double epsilon = 0.02;
 
         if (pos + epsilon >= length)
         {
@@ -40,6 +39,17 @@ void PlayerAudio::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferTo
                 transportSource.start();
                 DBG("PlayerAudio: fallback loop restart executed (userLooping=" << (userLooping ? "YES" : "NO") << ")");
             }
+        }
+    }
+
+    if (isSegmentLooping && loopEnd > loopStart)
+    {
+        double pos = transportSource.getCurrentPosition();
+        if (pos >= loopEnd)
+        {
+            transportSource.setPosition(loopStart);
+            transportSource.start();
+            DBG("PlayerAudio: Segment loop restart from " << loopStart << " to " << loopEnd);
         }
     }
 }
@@ -71,6 +81,13 @@ bool PlayerAudio::loadFile(const juce::File& file)
 
         readerSource = std::make_unique<juce::AudioFormatReaderSource>(reader, true);
         transportSource.setSource(readerSource.get(), 0, nullptr, reader->sampleRate);
+
+        currentFile = file;
+
+        // ===== Extract metadata =====
+        currentTitle = reader->metadataValues.getValue("title", file.getFileNameWithoutExtension());
+        currentArtist = reader->metadataValues.getValue("artist", "Unknown");
+        currentAlbum = reader->metadataValues.getValue("album", "Unknown");
 
         return true;
     }
@@ -108,7 +125,6 @@ double PlayerAudio::getLength() const
     return transportSource.getLengthInSeconds();
 }
 
-
 bool PlayerAudio::isLooping() const
 {
     return transportSource.isLooping();
@@ -120,4 +136,15 @@ void PlayerAudio::setSpeed(float ratio)
     {
         resampler->setResamplingRatio(ratio);
     }
+}
+
+void PlayerAudio::setLoopPoints(double start, double end)
+{
+    loopStart = juce::jmax(0.0, start);
+    loopEnd = juce::jmax(loopStart, end);
+}
+
+void PlayerAudio::enableSegmentLoop(bool shouldLoop)
+{
+    isSegmentLooping = shouldLoop;
 }

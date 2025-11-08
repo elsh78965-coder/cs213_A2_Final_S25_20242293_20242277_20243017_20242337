@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <JuceHeader.h>
 
 class PlayerAudio
@@ -24,10 +24,36 @@ public:
 
     void setSpeed(float ratio);
 
+    // ===== Metadata =====
+    juce::String currentTitle = "Unknown";
+    juce::String currentArtist = "Unknown";
+    juce::String currentAlbum = "Unknown";
+
+    // ===== Getters =====
+    juce::String getCurrentTitle() const { return currentTitle; }
+    juce::String getCurrentArtist() const { return currentArtist; }
+    juce::String getCurrentAlbum() const { return currentAlbum; }
+    juce::File getCurrentFile() const { return currentFile; }
+    bool isFileLoaded() const { return currentFile.existsAsFile(); }
+
+    // A-B segment loop setters
+    void setLoopPoints(double start, double end);
+    void enableSegmentLoop(bool shouldLoop);
+
+    double getLoopStart() const { return loopStart; }
+    double getLoopEnd() const { return loopEnd; }
+
 private:
     juce::AudioFormatManager formatManager;
     std::unique_ptr<juce::AudioFormatReaderSource> readerSource;
     juce::AudioTransportSource transportSource;
+
+    juce::File currentFile;
+
+    // A-B segment looping
+    double loopStart = 0.0;
+    double loopEnd = 0.0;
+    bool isSegmentLooping = false;
 
     std::unique_ptr<juce::ResamplingAudioSource> resampler;
 
